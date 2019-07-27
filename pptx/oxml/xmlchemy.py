@@ -7,6 +7,7 @@ classes.
 
 from __future__ import absolute_import, print_function
 
+from copy import copy, deepcopy
 import re
 
 from lxml import etree
@@ -790,6 +791,10 @@ class _OxmlElementBase(etree.ElementBase):
         XML namespace mapping in centralized location.
         """
         return super(BaseOxmlElement, self).xpath(xpath_str, namespaces=_nsmap)
+
+    def duplicate(self, depth=True):
+        if depth is True:
+            return deepcopy()
 
 
 BaseOxmlElement = MetaOxmlElement(

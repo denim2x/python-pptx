@@ -250,6 +250,44 @@ class Slide(_BaseSlide):
         """
         return self.part.slide_layout
 
+    def _duplicate(self, attr, depth, rest):
+        """
+        Duplicates (or diretly returns) the element(s) identified by |attr|.
+        Parameters: see |duplicate()|
+        """
+        assert hasattr(self, attr), "'%s' is not a member of |Slide|" % (attr,)
+        depth = rest.get(attr, depth)
+        assert depth is True or depth >= 0, "|depth| should be |True| or non-negative |int|"
+        elem = getattr(self, attr)
+        if depth == 0 or elem is None:
+            return elem  # direct reference
+        return elem.duplicate(True if depth is True else depth - 1)
+
+
+    def __call__(self, slide, depth=True, **kw):
+        """
+        Assigns the contents of |slide| to |self|, down to the given |depth|.
+        Parameters:
+          |slide|: |Slide|
+            specifies the source Slide object
+          |depth|: int|bool (defaut: True)
+            specifies the level of duplication of |self|'s contents:
+              True: |duplicate| is recursively called on each descendant from |self|
+              <number>: |duplicate| is recursively called with the |depth| argument
+                decremented at each level until it's 0, when it creates a reference;
+                thus, a value of 0 entails creating references for all top-level elements
+          <type>=<value>: int|bool
+            pecifies custom duplication level (|value|) for all elements of type |type|, 
+            in the exact same manner as |depth|
+        """        
+        background = slide._duplicate('background', depth, kw)
+        notes_slide = slide._duplicate('notes_slide', depth, kw)
+        placeholders = slide._duplicate('placeholders', depth, kw)
+        shapes = slide._duplicate('shapes', depth, kw)
+
+        
+        return self
+
 
 class Slides(ParentedElementProxy):
     """
@@ -314,6 +352,23 @@ class Slides(ParentedElementProxy):
                 return idx
         raise ValueError("%s is not in slide collection" % slide)
 
+    def duplicate(self, slide_index=None, slide_id=None, depth=True, **kw):
+        """
+
+        """
+        slide = None
+
+        if slide_index is not None:
+            slide = self[slide_index]
+        elif slide_id is not None:
+            slide = self.get(slide_id)
+
+        if slide is None:
+            return
+
+        slide_layout = slide.slide_layout
+        clone = self.add_slide(slide_layout)
+        return clone(slide, depth, **kw)
 
 class SlideLayout(_BaseSlide):
     """
@@ -540,3 +595,12 @@ class _Background(ElementProxy):
         """
         bgPr = self._cSld.get_or_add_bgPr()
         return FillFormat.from_fill_parent(bgPr)
+
+    def duplicate(self, depth=True):
+        if depth is 0:
+            return self
+
+        if depth is 1:
+            return _Background(self._cSld)
+
+        return 
